@@ -7,4 +7,5 @@ Painel da linha BIOLISA: previsão × venda × produção × estoque, por produt
 - Atualização mensal: planilha Controle_Previsibilidade_Biolisa_2026.xlsx (abas LANCAMENTO_MENSAL e COMPRAS_CLIENTES) → botão "Carregar planilha" no painel, ou regerar o `index.html`.
 
 ## Publicar como site (GitHub Pages)
-Settings → Pages → Source: *GitHub Actions* (o fluxo `.github/workflows/pages.yml` publica a cada envio).
+Settings → Pages → Source: *Deploy from a branch* → branch `main`, pasta `/ (root)` → Save.
+Endereço: https://neimarbiomedicomg-code.github.io/painel_gestor_dbs/
