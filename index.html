@@ -420,7 +420,11 @@ button:disabled{opacity:.5;cursor:not-allowed}
         <div class="arow"><button id="updFileBtn" type="button" class="pri">Escolher a planilha (.xlsx)</button></div>
       </section>
       <div id="updMsg"></div>
-      <div class="ubox pub"><b>Publicar para todos</b>
+      <details class="ubox" id="updMails"><summary><b>E-mails do relatório semanal de estoque</b> <span class="meta">(toda sexta, 16h)</span></summary>
+          <p class="meta">Até 5 e-mails. Salve e depois clique em <b>Publicar no link</b>: o próximo relatório de sexta já vai para esta lista.</p>
+          <div id="updMailsF" style="display:grid;gap:6px;margin:6px 0"></div>
+          <div class="arow"><button id="updMailsOk" type="button" class="mini">Salvar e-mails</button></div></details>
+        <div class="ubox pub"><b>Publicar para todos</b>
         <p class="meta">Depois de aplicar, publique para que quem tem o link veja os dados novos. Os FCAs editados neste navegador também vão junto. <span id="updDirty" style="color:var(--warn-ink);font-weight:700"></span></p>
         <details id="updTk"><summary id="updTkS">Chave de publicação do GitHub</summary>
           <ol class="meta"><li>Abra <b>github.com/settings/personal-access-tokens/new</b> (logado na conta do painel).</li><li><b>Token name:</b> Painel Gestor DBS · <b>Expiration:</b> 1 ano.</li><li><b>Repository access:</b> Only select repositories → <b>painel_gestor_dbs</b>.</li><li><b>Permissions › Repository permissions › Contents:</b> Read and write.</li><li><b>Generate token</b>, copie o código (começa com github_pat_) e cole abaixo.</li></ol>
@@ -1151,7 +1155,13 @@ const setTk=v=>{try{v?localStorage.setItem(TKKEY,v):localStorage.removeItem(TKKE
 const ghRepo=()=>{ const h=location.hostname, p=location.pathname.split('/').filter(Boolean); return h.endsWith('.github.io')&&p.length&&!/\.html?$/.test(p[0])?{o:h.split('.')[0],r:p[0]}:{o:'neimarbiomedicomg-code',r:'painel_gestor_dbs'}; };
 const onPages=()=>location.hostname.endsWith('.github.io');
 function updMsg(t,h){ $('updMsg').innerHTML=h?`<div class="amsg ${t}">${h}</div>`:''; }
-function updOpen(){ $('upd').hidden=false; document.body.classList.add('lock'); updTab('lancar'); updMonth(); updState(); }
+function updOpen(){ $('upd').hidden=false; document.body.classList.add('lock'); updTab('lancar'); updMonth(); updState(); mailsRender(); }
+const MAIL_RE=/^[^\s@;,]+@[^\s@;,]+\.[^\s@;,]+$/;
+function mailsRender(){ const l=(src.param&&src.param.emails)||[]; $('updMailsF').innerHTML=Array.from({length:5},(_,i)=>`<input type="email" data-mail="${i}" placeholder="E-mail ${i+1}" value="${esc(l[i]||'')}" autocomplete="off" spellcheck="false" style="font:inherit;padding:8px;border:1px solid var(--line,#d8e0e6);border-radius:7px">`).join(''); }
+function mailsSalvar(){ const v=[...document.querySelectorAll('#updMailsF [data-mail]')].map(i=>i.value.trim()).filter(Boolean); const bad=v.filter(x=>!MAIL_RE.test(x));
+  if(bad.length){ updMsg('err','E-mail inválido: '+esc(bad.join(', '))); return; }
+  const u=[...new Set(v.map(x=>x.toLowerCase()))]; src.param=src.param||{}; src.param.emails=u; UPD.dirty=true; updState(); mailsRender();
+  updMsg('ok',u.length?`${u.length} e-mail(s) salvo(s). Agora clique em <b>Publicar no link</b> para o relatório de sexta usar esta lista.`:'Lista de e-mails vazia. O relatório semanal vai só para o dono do painel. Clique em Publicar no link para confirmar.'); }
 function updClose(){ $('upd').hidden=true; document.body.classList.remove('lock'); }
 function updTab(t){ document.querySelectorAll('#upd [data-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===t))); $('updLancar').hidden=t!=='lancar'; $('updImport').hidden=t!=='import'; }
 function updState(){ const tk=getTk(); $('updTkS').textContent=tk?'Chave de publicação do GitHub: salva ✓':'Chave de publicação do GitHub (necessária para publicar no link)';
@@ -1246,7 +1256,7 @@ $('upd').addEventListener('click',e=>{ if(e.target===$('upd'))updClose(); });
 document.querySelectorAll('#upd [data-tab]').forEach(b=>b.onclick=()=>updTab(b.dataset.tab));
 $('updMes').onchange=updMonth; $('updPasteBtn').onclick=updPasteProd; $('updApply').onclick=updAplicar;
 $('updFileBtn').onclick=()=>$('file').click(); $('file').onchange=e=>{ updImport(e.target.files[0]); e.target.value=''; };
-$('updDl').onclick=updBaixar; $('updPub').onclick=updPublicar;
+$('updMailsOk').onclick=mailsSalvar; $('updDl').onclick=updBaixar; $('updPub').onclick=updPublicar;
 $('updTkOk').onclick=()=>{ const v=$('updTkI').value.trim(); if(!/^(github_pat_|ghp_)/.test(v)){ updMsg('err','A chave começa com github_pat_ — copie de novo no GitHub.'); return; } setTk(v); $('updTkI').value=''; $('updTk').open=false; updState(); updMsg('ok','Chave salva neste navegador.'); };
 $('updTkDel').onclick=()=>{ setTk(''); updState(); updMsg('inf','Chave apagada deste navegador.'); };
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('upd').hidden)updClose(); });
