@@ -22,6 +22,7 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
 html,body{height:100%;background:var(--bg);color:var(--fg)}
 body{margin:0;font-family:var(--f-body);font-size:15px;line-height:1.45;overflow:hidden}
 button,input,select{font:inherit;color:inherit}
@@ -243,10 +244,12 @@ let dots=L.layerGroup().addTo(map);
 function styleUF(){ufLayer.eachLayer(l=>{const u=l.feature.properties.uf;
   if(S.uf)l.setStyle({fillColor:u===S.uf?'#0f1a24':'#080c14',opacity:u===S.uf?.8:.18,weight:u===S.uf?1.5:1});
   else{const v=sumCats(RES.ufs[u]?RES.ufs[u].n:[0,0,0,0]);const t=Math.min(1,Math.sqrt(v/7500));l.setStyle({fillColor:'rgb('+Math.round(11+t*20)+','+Math.round(17+t*60)+','+Math.round(28+t*58)+')',opacity:.35,weight:1});}});}
+const bubR=t=>{const f=Math.pow(2,(map.getZoom()-4)*.6);return Math.max(1.6,Math.min(18,Math.sqrt(t)*.75*f));};
+map.on('zoomend',()=>{if(!S.uf)dots.eachLayer(l=>l._tot&&l.setRadius(bubR(l._tot)));});
 function drawBrasil(){dots.clearLayers();
   RES.mun.forEach(m=>{const n=m.slice(5,9);const tot=sumCats(n);if(!tot)return;const exe=(S.cats[0]?n[0]:0)+(S.cats[1]?n[1]:0);
     const col=exe?'#b48ae6':'#ffcc3d';
-    L.circleMarker([m[3],m[4]],{renderer:canvas,radius:Math.max(2,Math.min(16,Math.sqrt(tot)*1.4)),stroke:false,fillColor:col,fillOpacity:.55})
+    L.circleMarker([m[3],m[4]],{renderer:canvas,radius:bubR(tot),stroke:false,fillColor:col,fillOpacity:.6}).on('add',function(){this._tot=tot;})
      .bindTooltip('<b>'+esc(m[1])+'</b> · '+m[2]+'<br>'+fmt(tot)+' estabelecimentos'+(exe?'':'<br><span style="color:#ffb35c">nenhum laboratório executor</span>'),{direction:'top',offset:[0,-4]})
      .on('click',()=>openMun(m[0])).addTo(dots);});
   $('legend').innerHTML='<span><i style="background:#b48ae6"></i>Cidade com laboratório que executa</span><span><i style="background:#ffcc3d"></i>Cidade só com coleta</span><span style="color:var(--dim)">tamanho = nº de estabelecimentos</span>';}
