@@ -199,6 +199,7 @@ textarea.cb{position:fixed;left:-9999px}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
+if(matchMedia('(max-width:899px)').matches)document.body.classList.add('show-map');
 (async function(){
 const $=id=>document.getElementById(id);
 const CATS=[{n:'Laboratório clínico',s:'Laboratório',c:'#b48ae6',d:'executa exames'},{n:'Lab. em hospital ou unidade',s:'Lab. hospitalar',c:'#5fb0ff',d:'laboratório próprio'},{n:'Posto de coleta',s:'Posto de coleta',c:'#ffcc3d',d:'coleta e envia'},{n:'Unidade com coleta',s:'Unid. c/ coleta',c:'#8d9aa8',d:'UBS/hospital que terceiriza'}];
@@ -234,7 +235,7 @@ const passR=r=>S.cats[r.c]&&(S.sus===''||String(r.sus)===S.sus)&&(!S.ex||(r.bm>>
 const map=L.map('map',{zoomControl:false,attributionControl:false,preferCanvas:true,minZoom:3,maxZoom:17,zoomSnap:.25,worldCopyJump:false});
 const canvas=L.canvas({padding:.3});
 const BRB=L.latLngBounds([-33.8,-74],[5.3,-34.7]);
-map.fitBounds(BRB);
+map.setView([-15,-53],4);if(map.getSize().x)map.fitBounds(BRB);
 const ufLayer=L.geoJSON(GEO,{style:f=>({color:'#7fe3d4',opacity:.28,weight:1,fillColor:'#0b111c',fillOpacity:1}),
   onEachFeature:(f,l)=>{l.on('click',()=>openUF(f.properties.uf));l.on('mouseover',()=>{if(!S.uf)l.setStyle({fillColor:'#11202a'})});l.on('mouseout',()=>styleUF());}}).addTo(map);
 const ufLbl=L.layerGroup(GEO.features.map(f=>L.marker([f.properties.c[1],f.properties.c[0]],{interactive:false,icon:L.divIcon({className:'uflbl',html:f.properties.uf,iconSize:[30,14]})}))).addTo(map);
@@ -254,7 +255,7 @@ function drawUF(){dots.clearLayers();const rows=DATA[S.uf]||[];
     L.circleMarker([r.lat,r.lng],{renderer:canvas,radius:S.mun?(sel?6:3):4.5,weight:sel?1.5:0,color:'#e6edf5',fillColor:CATS[r.c].c,fillOpacity:S.mun&&!sel?.25:.9})
      .bindTooltip('<b>'+esc(r.nome)+'</b><br>'+esc(munN(r.mun)),{direction:'top',offset:[0,-4]}).on('click',()=>openFicha(r)).addTo(dots);});
   $('legend').innerHTML=CATS.map((c,i)=>S.cats[i]?'<span><i style="background:'+c.c+'"></i>'+c.n+'</span>':'').join('');}
-function fitView(){if(S.mun&&DATA[S.uf]){const p=DATA[S.uf].filter(r=>r.mun===S.mun).map(r=>[r.lat,r.lng]);if(p.length){map.flyToBounds(L.latLngBounds(p).pad(.25),{maxZoom:14,duration:.7});return;}}
+function fitView(){const sz=map.getSize();if(!sz.x||!sz.y)return;if(S.mun&&DATA[S.uf]){const p=DATA[S.uf].filter(r=>r.mun===S.mun).map(r=>[r.lat,r.lng]);if(p.length){map.flyToBounds(L.latLngBounds(p).pad(.25),{maxZoom:14,duration:.7});return;}}
   if(S.uf){const b=UFG[S.uf].b;map.flyToBounds([[b[1],b[0]],[b[3],b[2]]],{duration:.7,padding:[20,20]});}else map.flyToBounds(BRB,{duration:.7});}
 function drawMap(){styleUF();S.uf?drawUF():drawBrasil();}
 $('zIn').onclick=()=>map.zoomIn();$('zOut').onclick=()=>map.zoomOut();$('zFit').onclick=fitView;
@@ -374,6 +375,7 @@ $('res').addEventListener('click',async e=>{const b=e.target.closest('button');i
 
 render();
 if(matchMedia('(max-width:899px)').matches)showMap(true);
+addEventListener('resize',()=>map.invalidateSize());
 })().catch(e=>{document.getElementById('side').innerHTML='<p style="color:#ffb35c;padding:20px">Não foi possível abrir o atlas: '+String(e.message||e)+'</p>';});
 </script>
 
