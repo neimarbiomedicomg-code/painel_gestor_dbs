@@ -249,13 +249,13 @@ map.on('zoomend',()=>{if(!S.uf)dots.eachLayer(l=>l._tot&&l.setRadius(bubR(l._tot
 function drawBrasil(){dots.clearLayers();
   RES.mun.forEach(m=>{const n=m.slice(5,9);const tot=sumCats(n);if(!tot)return;const exe=(S.cats[0]?n[0]:0)+(S.cats[1]?n[1]:0);
     const col=exe?'#b48ae6':'#ffcc3d';
-    L.circleMarker([m[3],m[4]],{renderer:canvas,radius:bubR(tot),stroke:false,fillColor:col,fillOpacity:.6}).on('add',function(){this._tot=tot;})
+    L.circleMarker([m[3],m[4]],{radius:bubR(tot),stroke:false,fillColor:col,fillOpacity:.6}).on('add',function(){this._tot=tot;})
      .bindTooltip('<b>'+esc(m[1])+'</b> · '+m[2]+'<br>'+fmt(tot)+' estabelecimentos'+(exe?'':'<br><span style="color:#ffb35c">nenhum laboratório executor</span>'),{direction:'top',offset:[0,-4]})
      .on('click',()=>openMun(m[0])).addTo(dots);});
   $('legend').innerHTML='<span><i style="background:#b48ae6"></i>Cidade com laboratório que executa</span><span><i style="background:#ffcc3d"></i>Cidade só com coleta</span><span style="color:var(--dim)">tamanho = nº de estabelecimentos</span>';}
 function drawUF(){dots.clearLayers();const rows=DATA[S.uf]||[];
   rows.forEach(r=>{if(!passR(r))return;const sel=S.mun&&r.mun===S.mun;
-    L.circleMarker([r.lat,r.lng],{renderer:canvas,radius:S.mun?(sel?6:3):4.5,weight:sel?1.5:0,color:'#e6edf5',fillColor:CATS[r.c].c,fillOpacity:S.mun&&!sel?.25:.9})
+    L.circleMarker([r.lat,r.lng],{radius:S.mun?(sel?6:3):4.5,weight:sel?1.5:0,color:'#e6edf5',fillColor:CATS[r.c].c,fillOpacity:S.mun&&!sel?.25:.9})
      .bindTooltip('<b>'+esc(r.nome)+'</b><br>'+esc(munN(r.mun)),{direction:'top',offset:[0,-4]}).on('click',()=>openFicha(r)).addTo(dots);});
   $('legend').innerHTML=CATS.map((c,i)=>S.cats[i]?'<span><i style="background:'+c.c+'"></i>'+c.n+'</span>':'').join('');}
 function fitView(){const sz=map.getSize();if(!sz.x||!sz.y)return;if(S.mun&&DATA[S.uf]){const p=DATA[S.uf].filter(r=>r.mun===S.mun).map(r=>[r.lat,r.lng]);if(p.length){map.flyToBounds(L.latLngBounds(p).pad(.25),{maxZoom:14,duration:.7});return;}}
