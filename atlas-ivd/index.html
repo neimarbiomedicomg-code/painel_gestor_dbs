@@ -218,7 +218,7 @@ const NAT=['Pública','Privada','Filantrópica'];
 const fmt=n=>n.toLocaleString('pt-BR');
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
-const CDN='https://cdn.jsdelivr.net/gh/neimarbiomedicomg-code/painel_gestor_dbs@d0444913df0144aa85603354cc846488ddac47ab/atlas-ivd/';let BASE='';
+const CDN='https://neimarbiomedicomg-code.github.io/painel_gestor_dbs/atlas-ivd/'; /* endereço da base quando o arquivo é aberto fora do site; troque se copiar o Atlas para outro GitHub */let BASE='';
 const getJ=u=>fetch(BASE+u).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();});
 
 let RES,GEO;try{[RES,GEO]=await Promise.all([getJ('resumo.json'),getJ('estados.json')]);}catch(e){BASE=CDN;[RES,GEO]=await Promise.all([getJ('resumo.json'),getJ('estados.json')]);}
@@ -297,7 +297,7 @@ function viewBrasil(){const tot=[0,0,0,0];UFS.forEach(u=>RES.ufs[u].n.forEach((v
   side.innerHTML=crumbs()+'<h1>'+fmt(sumCats(tot))+' estabelecimentos</h1><p class="sub">Laboratórios clínicos e pontos de coleta ativos no Brasil.</p>'+kpis(tot)+
    '<div class="lbl"><span>Estados</span><span>toque para abrir</span></div><div class="rows">'+L.map(([u,n,t])=>'<button type="button" class="row" data-uf="'+u+'"><span style="min-width:0"><span class="nm">'+u+' · '+esc(ufNome(u))+'</span>'+bar(n)+'</span><b>'+fmt(t)+'</b><span class="go">›</span></button>').join('')+'</div>'+
    '<div class="lbl"><span>Espaço comercial</span><span>sem lab executor</span></div><div class="warn"><p>Cidades com pontos de coleta e nenhum laboratório que execute exames.</p><div class="rows">'+ws.map(m=>'<button type="button" class="row" data-mun="'+m[0]+'"><span class="nm">'+esc(m[1])+' · '+m[2]+'</span><b>'+(m[7]+m[8])+' coletas</b><span class="go">›</span></button>').join('')+'</div></div>'+
-   '<p class="note">'+esc(RES.nota)+'</p>';}
+   '<p class="note">'+esc(RES.nota)+(/github\.io$/.test(location.hostname)?' <a href="atualizador.html" style="color:var(--neuro)">Atualizar a base ›</a>':'')+'</p>';}
 
 function filtersHTML(){return '<div class="filters"><div class="seg" id="fSus"><button type="button" data-v="" aria-pressed="'+(S.sus==='')+'">Todos</button><button type="button" data-v="1" aria-pressed="'+(S.sus==='1')+'">Atende SUS</button><button type="button" data-v="0" aria-pressed="'+(S.sus==='0')+'">Sem SUS</button></div>'+
   '<select id="fEx" aria-label="Área de exame"><option value="0">Qualquer área de exame</option>'+Object.entries(EX).map(([k,v])=>'<option value="'+k+'"'+(+k===S.ex?' selected':'')+'>'+v+'</option>').join('')+'</select></div>';}
