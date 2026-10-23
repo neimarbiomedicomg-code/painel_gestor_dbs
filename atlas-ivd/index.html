@@ -30,7 +30,7 @@ button,input,select{font:inherit;color:inherit}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:40;background:var(--bg)}
 
 .app{position:fixed;inset:0;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
-header{flex:none;display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line)}
+header{flex:none;position:relative;z-index:1200;display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:10px;min-width:0}
 .logo{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--neuro);display:grid;place-items:center;flex:none}
 .logo i{width:7px;height:7px;border-radius:50%;background:var(--neuro);animation:hb 1.6s infinite}
@@ -52,7 +52,7 @@ header{flex:none;display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;pa
 
 .body{flex:1;min-height:0;display:grid;grid-template-columns:400px minmax(0,1fr)}
 .side{min-height:0;overflow:auto;border-right:1px solid var(--line);padding-block:12px 28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:16px}
-.mapwrap{position:relative;min-height:0}
+.mapwrap{position:relative;min-height:0;isolation:isolate}
 #map{position:absolute;inset:0;background:radial-gradient(70% 60% at 50% 48%,rgba(127,227,212,.06),transparent 70%),var(--panel)}
 .mtoggle{display:none}
 @media (max-width:899px){
@@ -139,9 +139,9 @@ select{background:var(--bg2);border:1px solid var(--line2);border-radius:8px;pad
 .mbusy{position:absolute;z-index:1100;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:10px;background:rgba(11,17,28,.95);border:1px solid var(--line2);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--muted)}
 
 /* ficha */
-.scrim{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim{position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .2s}
 .scrim.on{opacity:1;pointer-events:auto}
-.sheet{position:fixed;z-index:61;left:0;right:0;bottom:0;max-height:88%;overflow:auto;background:var(--panel);border-top:1px solid var(--line2);border-radius:18px 18px 0 0;
+.sheet{position:fixed;z-index:1301;left:0;right:0;bottom:0;max-height:88%;overflow:auto;background:var(--panel);border-top:1px solid var(--line2);border-radius:18px 18px 0 0;
   padding-block:8px calc(20px + env(safe-area-inset-bottom,0px));padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));transform:translateY(105%);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
 .sheet.on{transform:none}
 @media (min-width:900px){.sheet{left:auto;right:16px;bottom:16px;top:auto;width:440px;border-radius:16px;border:1px solid var(--line2);max-height:calc(100% - 100px)}}
@@ -166,7 +166,7 @@ dd{margin:0;overflow-wrap:anywhere;font-size:14px;user-select:text}
 .exs span{font-size:12px;padding:3px 8px;border-radius:6px;background:rgba(180,138,230,.13);color:#dac8f3}
 .links{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 .links a{color:var(--neuro);font-size:13px;font-weight:600;text-decoration:none;border:1px solid var(--line2);border-radius:999px;padding:7px 12px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));z-index:70;background:var(--neuro);color:var(--bg);font-weight:700;font-size:13px;padding:9px 14px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));z-index:1400;background:var(--neuro);color:var(--bg);font-weight:700;font-size:13px;padding:9px 14px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.on{opacity:1}
 textarea.cb{position:fixed;left:-9999px}
 @media (prefers-reduced-motion:reduce){.logo i,.spin{animation:none}.sheet,.scrim{transition:none}}
@@ -253,7 +253,7 @@ function drawBrasil(){dots.clearLayers();
     const col=exe?'#b48ae6':'#ffcc3d';
     L.circleMarker([m[3],m[4]],{radius:bubR(tot),stroke:false,fillColor:col,fillOpacity:.6}).on('add',function(){this._tot=tot;})
      .bindTooltip('<b>'+esc(m[1])+'</b> · '+m[2]+'<br>'+fmt(tot)+' estabelecimentos'+(exe?'':'<br><span style="color:#ffb35c">nenhum laboratório executor</span>'),{direction:'top',offset:[0,-4]})
-     .on('click',e=>{L.DomEvent.stopPropagation(e);openMun(m[0]);}).addTo(dots);});
+     .on('click',e=>{L.DomEvent.stopPropagation(e);map.getZoom()<5.5?openUF(m[2]):openMun(m[0]);}).addTo(dots);});
   $('legend').innerHTML='<span><i style="background:#b48ae6"></i>Cidade com laboratório que executa</span><span><i style="background:#ffcc3d"></i>Cidade só com coleta</span><span style="color:var(--dim)">tamanho = nº de estabelecimentos</span>';}
 function drawUF(){dots.clearLayers();const rows=DATA[S.uf]||[];
   rows.forEach(r=>{if(!passR(r))return;const sel=S.mun&&r.mun===S.mun;
@@ -262,7 +262,7 @@ function drawUF(){dots.clearLayers();const rows=DATA[S.uf]||[];
   $('legend').innerHTML=CATS.map((c,i)=>S.cats[i]?'<span><i style="background:'+c.c+'"></i>'+c.n+'</span>':'').join('');}
 let flyT;const fly=(b,o)=>{b=L.latLngBounds(b);clearTimeout(flyT);if(document.hidden){map.fitBounds(b,{...o,animate:false});return;}map.flyToBounds(b,o);
   flyT=setTimeout(()=>{const c=map.getCenter(),t=b.getCenter();if(Math.abs(c.lat-t.lat)+Math.abs(c.lng-t.lng)>.05)map.fitBounds(b,{...o,animate:false});},((o&&o.duration)||.7)*1000+700);};
-function fitView(){const sz=map.getSize();if(!sz.x||!sz.y)return;if(S.mun&&DATA[S.uf]){const p=DATA[S.uf].filter(r=>r.mun===S.mun).map(r=>[r.lat,r.lng]);if(p.length){fly(L.latLngBounds(p).pad(.25),{maxZoom:14,duration:.7});return;}}
+function fitView(){const sz=map.getSize();if(!sz.x||!sz.y)return;if(S.mun&&DATA[S.uf]){const p=DATA[S.uf].filter(r=>r.mun===S.mun);if(p.length){const q=(a,f)=>{a=a.slice().sort((x,y)=>x-y);return a[Math.floor(f*(a.length-1))];};const la=p.map(r=>r.lat),lo=p.map(r=>r.lng);const b=[[q(la,.05),q(lo,.05)],[q(la,.95),q(lo,.95)]];fly(L.latLngBounds(b).pad(.3),{maxZoom:14,duration:.7});return;}}
   if(S.uf){const b=UFG[S.uf].b;fly([[b[1],b[0]],[b[3],b[2]]],{duration:.7,padding:[20,20]});}else fly(BRB,{duration:.7});}
 function drawMap(){styleUF();S.uf?drawUF():drawBrasil();}
 $('zIn').onclick=()=>map.zoomIn();$('zOut').onclick=()=>map.zoomOut();$('zFit').onclick=fitView;
