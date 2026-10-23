@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Atlas IVD</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#05070c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: padrão Córtex. Topo com busca; painel de navegação (Brasil › Estado › Cidade) à esquerda e mapa à direita no computador;
+   no celular, lista e mapa alternam por um botão fixo. Abre com um resumo leve e baixa cada estado só quando você entra nele. */
+:root{
+  --bg:#05070c; --bg2:#0a0f19; --panel:#0b111c; --line:#17212f; --line2:#223044;
+  --fg:#e6edf5; --muted:#8a99ad; --dim:#5d6c82;
+  --neuro:#7fe3d4; --spark:#ffb35c; --ok:#6fdc8c;
+  --c0:#b48ae6; --c1:#5fb0ff; --c2:#ffcc3d; --c3:#8d9aa8;
+  --f-display:"Syne","Trebuchet MS",sans-serif;
+  --f-body:"Manrope",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--fg)}
+body{margin:0;font-family:var(--f-body);font-size:15px;line-height:1.45;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--neuro);outline-offset:2px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:40;background:var(--bg)}
+
+.app{position:fixed;inset:0;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+header{flex:none;display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--neuro);display:grid;place-items:center;flex:none}
+.logo i{width:7px;height:7px;border-radius:50%;background:var(--neuro);animation:hb 1.6s infinite}
+@keyframes hb{0%,100%{opacity:.4;transform:scale(.8)}12%{opacity:1;transform:scale(1.2)}30%{opacity:.7;transform:scale(1)}}
+.brand b{font-family:var(--f-display);font-weight:800;font-size:16px;letter-spacing:.02em}
+.brand b span{color:var(--neuro)}
+.brand small{display:block;font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.sbox{position:relative;flex:1 1 260px;max-width:520px}
+.sbox input{width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:12px;padding:10px 36px;font-size:15px}
+.sbox svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--muted)}
+.sbox .clr{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--muted);width:32px;height:32px;cursor:pointer}
+.res{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:50;background:var(--panel);border:1px solid var(--line2);border-radius:12px;max-height:min(60vh,440px);overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.7)}
+.res h4{margin:0;padding:8px 12px 4px;font-family:var(--f-mono);font-weight:400;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.res button{all:unset;cursor:pointer;display:block;width:100%;box-sizing:border-box;padding:8px 12px;border-bottom:1px solid var(--line)}
+.res button:hover,.res button:focus-visible{background:rgba(127,227,212,.07)}
+.res b{display:block;font-weight:600;font-size:14px}
+.res small{font-size:12px;color:var(--muted)}
+.res p{margin:0;padding:12px;color:var(--muted);font-size:13px}
+
+.body{flex:1;min-height:0;display:grid;grid-template-columns:400px minmax(0,1fr)}
+.side{min-height:0;overflow:auto;border-right:1px solid var(--line);padding-block:12px 28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:16px}
+.mapwrap{position:relative;min-height:0}
+#map{position:absolute;inset:0;background:radial-gradient(70% 60% at 50% 48%,rgba(127,227,212,.06),transparent 70%),var(--panel)}
+.mtoggle{display:none}
+@media (max-width:899px){
+  .body{grid-template-columns:minmax(0,1fr)}
+  .side{border-right:0;padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}
+  .mapwrap{display:none}
+  body.show-map .side{display:none}
+  body.show-map .mapwrap{display:block}
+  .mtoggle{display:flex;position:fixed;z-index:30;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));gap:4px;background:rgba(11,17,28,.96);border:1px solid var(--line2);border-radius:999px;padding:4px;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+  .mtoggle button{border:0;background:none;color:var(--muted);font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;padding:10px 20px;border-radius:999px;cursor:pointer}
+  .mtoggle button[aria-pressed="true"]{background:var(--neuro);color:var(--bg)}
+}
+
+/* painel */
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+.crumbs button{all:unset;cursor:pointer;color:var(--neuro)}
+.crumbs b{color:var(--fg);font-weight:500}
+h1{font-family:var(--f-display);font-weight:800;font-size:24px;line-height:1.1;margin:0 0 4px;letter-spacing:.01em;text-wrap:balance}
+.sub{color:var(--muted);font-size:13px;margin:0 0 12px}
+.lbl{font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:18px 0 8px;display:flex;justify-content:space-between;gap:8px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kpi{all:unset;cursor:pointer;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 12px;display:flex;flex-direction:column;gap:3px}
+.kpi b{font-family:var(--f-mono);font-size:21px;font-weight:500;line-height:1.05;font-variant-numeric:tabular-nums;color:var(--cc)}
+.kpi span{font-size:12px;color:var(--muted);line-height:1.25;display:flex;align-items:center;gap:6px}
+.kpi span i{width:7px;height:10px;border-radius:2px;background:var(--cc);flex:none}
+.kpi[aria-pressed="false"]{opacity:.35}
+.kpi:focus-visible{outline:2px solid var(--neuro)}
+.hint{font-size:11.5px;color:var(--dim);margin:6px 0 0}
+.rows{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row{all:unset;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto 12px;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row:hover,.row:focus-visible{background:rgba(127,227,212,.05)}
+.row .nm{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.row .nm em{font-style:normal;font-family:var(--f-mono);font-size:10px;color:var(--spark);margin-left:6px;letter-spacing:.06em;text-transform:uppercase}
+.row .tr{display:flex;height:4px;border-radius:3px;overflow:hidden;background:var(--line);margin-top:6px}
+.row .tr i{height:100%}
+.row b{font-family:var(--f-mono);font-weight:400;font-size:13px;font-variant-numeric:tabular-nums}
+.row .go{color:var(--dim)}
+.cards{display:flex;flex-direction:column;gap:8px}
+.card{all:unset;cursor:pointer;display:grid;grid-template-columns:10px minmax(0,1fr) 12px;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+.card:hover,.card:focus-visible{border-color:var(--line2);background:#0e1522}
+.card .cap{width:9px;height:13px;border-radius:3px 3px 2px 2px;background:var(--cc);box-shadow:0 0 8px var(--cc)}
+.card strong{display:block;font-weight:700;font-size:14px;line-height:1.3}
+.card small{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.card .go{color:var(--dim)}
+.more,.act{all:unset;cursor:pointer;display:block;text-align:center;font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--neuro);padding:12px;border:1px dashed var(--line2);border-radius:12px;margin-top:8px}
+.act{border-style:solid;margin:0 0 8px}
+.filters{display:flex;flex-direction:column;gap:8px}
+.seg{display:flex;gap:4px;flex-wrap:wrap}
+.seg button{all:unset;cursor:pointer;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:6px 9px;border-radius:6px;border:1px solid var(--line2);color:var(--muted)}
+.seg button[aria-pressed="true"]{border-color:var(--neuro);color:var(--neuro);background:rgba(127,227,212,.06)}
+select{background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:8px;font-size:13px;width:100%}
+.warn{background:rgba(255,179,92,.06);border:1px solid rgba(255,179,92,.3);border-radius:12px;padding:10px 12px 4px}
+.warn p{margin:0 0 6px;font-size:12.5px;color:#e9d6bd}
+.warn .rows{background:transparent;border:0}
+.warn .row{padding:8px 0}
+.note{font-size:11.5px;color:var(--dim);line-height:1.5;margin:18px 0 0}
+.loading{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;padding:24px 4px}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--line2);border-top-color:var(--neuro);animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty{color:var(--muted);text-align:center;padding:24px 10px;font-size:14px}
+
+/* mapa */
+.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-layer{position:absolute;left:0;top:0}
+.leaflet-container{overflow:hidden;outline:0;font-family:var(--f-body);touch-action:none}
+.leaflet-container .leaflet-overlay-pane svg{max-width:none!important;max-height:none!important}
+.leaflet-pane{z-index:400}.leaflet-overlay-pane{z-index:400}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}
+.leaflet-map-pane canvas{z-index:100}.leaflet-map-pane svg{z-index:200}
+.leaflet-zoom-animated{transform-origin:0 0}
+.leaflet-zoom-anim .leaflet-zoom-animated{transition:transform .25s cubic-bezier(0,0,.25,1)}
+.leaflet-zoom-anim .leaflet-zoom-hide{visibility:hidden}
+.leaflet-interactive{cursor:pointer}
+.leaflet-grab{cursor:grab}.leaflet-dragging .leaflet-grab{cursor:grabbing}
+.leaflet-pane>svg path{pointer-events:none}.leaflet-pane>svg path.leaflet-interactive{pointer-events:auto}
+.leaflet-tooltip{position:absolute;padding:6px 9px;background:var(--panel);color:var(--fg);border:1px solid var(--line2);border-radius:8px;white-space:nowrap;pointer-events:none;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+.leaflet-tooltip b{font-weight:700}
+.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}
+.uflbl{font-family:var(--f-mono);font-size:10.5px;color:rgba(138,153,173,.75);letter-spacing:.06em;text-align:center;pointer-events:none;white-space:nowrap}
+.mtools{position:absolute;z-index:1100;right:max(10px,env(safe-area-inset-right,0px));top:10px;display:flex;flex-direction:column;gap:6px}
+.mtools button{width:40px;height:40px;border-radius:12px;border:1px solid var(--line2);background:rgba(11,17,28,.94);font-size:17px;cursor:pointer}
+.legend{position:absolute;z-index:1100;left:10px;top:10px;display:flex;flex-direction:column;gap:3px;background:rgba(5,7,12,.8);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-family:var(--f-mono);font-size:10.5px;color:var(--muted);max-width:calc(100% - 80px)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:9px;height:9px;border-radius:50%;flex:none}
+.mbusy{position:absolute;z-index:1100;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:10px;background:rgba(11,17,28,.95);border:1px solid var(--line2);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--muted)}
+
+/* ficha */
+.scrim{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;z-index:61;left:0;right:0;bottom:0;max-height:88%;overflow:auto;background:var(--panel);border-top:1px solid var(--line2);border-radius:18px 18px 0 0;
+  padding-block:8px calc(20px + env(safe-area-inset-bottom,0px));padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));transform:translateY(105%);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.sheet.on{transform:none}
+@media (min-width:900px){.sheet{left:auto;right:16px;bottom:16px;top:auto;width:440px;border-radius:16px;border:1px solid var(--line2);max-height:calc(100% - 100px)}}
+.grab{width:40px;height:4px;border-radius:2px;background:var(--line2);margin:4px auto 10px}
+.shead{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.x{border:0;background:var(--bg2);border-radius:50%;width:32px;height:32px;color:var(--muted);cursor:pointer;flex:none}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid currentColor}
+.sheet h3{font-weight:800;font-size:19px;line-height:1.25;margin:10px 0 2px}
+.sheet .rz{color:var(--muted);font-size:13px;margin:0 0 10px}
+.bacts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.bacts a,.bacts button{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 4px;border-radius:12px;background:var(--bg2);border:1px solid var(--line2);font-size:12px;font-weight:600;text-align:center}
+.bacts svg{width:21px;height:21px;stroke:var(--neuro);fill:none;stroke-width:1.7}
+.bacts .pri{background:var(--neuro);color:var(--bg);border-color:var(--neuro)}
+.bacts .pri svg{stroke:var(--bg)}
+dl{margin:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+dl div{display:grid;grid-template-columns:84px minmax(0,1fr);gap:10px;padding:9px 12px;border-bottom:1px solid var(--line)}
+dl div:last-child{border-bottom:0}
+dt{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding-top:3px}
+dd{margin:0;overflow-wrap:anywhere;font-size:14px;user-select:text}
+.exs{display:flex;gap:5px;flex-wrap:wrap;margin-top:12px}
+.exs span{font-size:12px;padding:3px 8px;border-radius:6px;background:rgba(180,138,230,.13);color:#dac8f3}
+.links{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.links a{color:var(--neuro);font-size:13px;font-weight:600;text-decoration:none;border:1px solid var(--line2);border-radius:999px;padding:7px 12px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));z-index:70;background:var(--neuro);color:var(--bg);font-weight:700;font-size:13px;padding:9px 14px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+textarea.cb{position:fixed;left:-9999px}
+@media (prefers-reduced-motion:reduce){.logo i,.spin{animation:none}.sheet,.scrim{transition:none}}
+</style>
+</head>
+<body>
+
+
+<div class="app">
+  <header>
+    <div class="brand"><span class="logo" aria-hidden="true"><i></i></span><div><b>CÓRTEX <span>Atlas IVD</span></b><small id="fonte">Laboratórios e postos de coleta · CNES</small></div></div>
+    <div class="sbox"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Buscar laboratório, cidade ou estado" autocomplete="off" aria-label="Buscar"><button class="clr" id="clr" type="button" aria-label="Limpar" hidden>✕</button>
+      <div class="res" id="res" hidden></div></div>
+  </header>
+  <div class="body">
+    <section class="side" id="side" aria-live="polite"><div class="loading"><span class="spin"></span>Abrindo o atlas…</div></section>
+    <section class="mapwrap" aria-label="Mapa">
+      <div id="map"></div>
+      <div class="legend" id="legend"></div>
+      <div class="mtools"><button type="button" id="zIn" aria-label="Aproximar">+</button><button type="button" id="zOut" aria-label="Afastar">−</button><button type="button" id="zFit" aria-label="Enquadrar">⟲</button></div>
+      <div class="mbusy" id="mbusy" hidden><span class="spin"></span><span>Carregando estado…</span></div>
+    </section>
+  </div>
+  <div class="mtoggle" id="mtog"><button type="button" data-v="map" aria-pressed="true">Mapa</button><button type="button" data-v="list" aria-pressed="false">Lista</button></div>
+</div>
+<div class="scrim" id="scrim"></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Ficha do estabelecimento"></section>
+<div class="toast" id="toast" role="status"></div>
+<textarea class="cb" id="cb" aria-hidden="true" tabindex="-1"></textarea>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+(async function(){
+const $=id=>document.getElementById(id);
+const CATS=[{n:'Laboratório clínico',s:'Laboratório',c:'#b48ae6',d:'executa exames'},{n:'Lab. em hospital ou unidade',s:'Lab. hospitalar',c:'#5fb0ff',d:'laboratório próprio'},{n:'Posto de coleta',s:'Posto de coleta',c:'#ffcc3d',d:'coleta e envia'},{n:'Unidade com coleta',s:'Unid. c/ coleta',c:'#8d9aa8',d:'UBS/hospital que terceiriza'}];
+const EX={1:'Bioquímica',2:'Hematologia e hemostasia',3:'Sorologia e imunologia',4:'Parasitologia',5:'Uroanálise',6:'Hormônios',7:'Vigilância epidemiológica',8:'Toxicologia',9:'Microbiologia',10:'Outros líquidos',11:'Genética',12:'Triagem neonatal',13:'Imuno-hematologia'};
+const NAT=['Pública','Privada','Filantrópica'];
+const fmt=n=>n.toLocaleString('pt-BR');
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const CDN='https://cdn.jsdelivr.net/gh/neimarbiomedicomg-code/painel_gestor_dbs@d0444913df0144aa85603354cc846488ddac47ab/atlas-ivd/';let BASE='';
+const getJ=u=>fetch(BASE+u).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();});
+
+let RES,GEO;try{[RES,GEO]=await Promise.all([getJ('resumo.json'),getJ('estados.json')]);}catch(e){BASE=CDN;[RES,GEO]=await Promise.all([getJ('resumo.json'),getJ('estados.json')]);}
+$('fonte').textContent='Labs e postos de coleta · CNES '+RES.comp;
+const UFS=Object.keys(RES.ufs).sort();
+const UFG={};GEO.features.forEach(f=>UFG[f.properties.uf]=f.properties);
+const ufNome=u=>UFG[u]?UFG[u].nome:u;
+const MUN={};RES.mun.forEach(m=>MUN[m[0]]={id:m[0],nome:m[1],uf:m[2],lat:m[3],lng:m[4],n:m.slice(5,9)});
+const munN=id=>MUN[id]?MUN[id].nome:id;
+const MIDX=RES.mun.map(m=>[norm(m[1]),m[0]]);
+
+const S={cats:[1,1,1,1],uf:null,mun:null,sus:'',ex:0,lim:60};
+const DATA={},DET={};
+const sumCats=n=>n.reduce((s,v,i)=>s+(S.cats[i]?v:0),0);
+
+// ---------- dados por estado ----------
+async function loadUF(uf){if(DATA[uf])return DATA[uf];
+  const raw=await getJ('uf/'+uf+'.json');
+  return DATA[uf]=raw.map((r,k)=>({k,uf,lat:r[0]/1e4,lng:r[1]/1e4,c:r[2],nome:r[3],mun:r[4],sus:r[5],nat:r[6],bm:r[7],key:norm(r[3])}));}
+async function loadDet(uf){return DET[uf]=DET[uf]||await getJ('uf/'+uf+'_d.json');}
+const passR=r=>S.cats[r.c]&&(S.sus===''||String(r.sus)===S.sus)&&(!S.ex||(r.bm>>S.ex&1));
+
+// ---------- mapa ----------
+const map=L.map('map',{zoomControl:false,attributionControl:false,preferCanvas:true,minZoom:3,maxZoom:17,zoomSnap:.25,worldCopyJump:false});
+const canvas=L.canvas({padding:.3});
+const BRB=L.latLngBounds([-33.8,-74],[5.3,-34.7]);
+map.fitBounds(BRB);
+const ufLayer=L.geoJSON(GEO,{style:f=>({color:'#7fe3d4',opacity:.28,weight:1,fillColor:'#0b111c',fillOpacity:1}),
+  onEachFeature:(f,l)=>{l.on('click',()=>openUF(f.properties.uf));l.on('mouseover',()=>{if(!S.uf)l.setStyle({fillColor:'#11202a'})});l.on('mouseout',()=>styleUF());}}).addTo(map);
+const ufLbl=L.layerGroup(GEO.features.map(f=>L.marker([f.properties.c[1],f.properties.c[0]],{interactive:false,icon:L.divIcon({className:'uflbl',html:f.properties.uf,iconSize:[30,14]})}))).addTo(map);
+let dots=L.layerGroup().addTo(map);
+function styleUF(){ufLayer.eachLayer(l=>{const u=l.feature.properties.uf;
+  if(S.uf)l.setStyle({fillColor:u===S.uf?'#0f1a24':'#080c14',opacity:u===S.uf?.8:.18,weight:u===S.uf?1.5:1});
+  else{const v=sumCats(RES.ufs[u]?RES.ufs[u].n:[0,0,0,0]);const t=Math.min(1,Math.sqrt(v/7500));l.setStyle({fillColor:'rgb('+Math.round(11+t*20)+','+Math.round(17+t*60)+','+Math.round(28+t*58)+')',opacity:.35,weight:1});}});}
+function drawBrasil(){dots.clearLayers();
+  RES.mun.forEach(m=>{const n=m.slice(5,9);const tot=sumCats(n);if(!tot)return;const exe=(S.cats[0]?n[0]:0)+(S.cats[1]?n[1]:0);
+    const col=exe?'#b48ae6':'#ffcc3d';
+    L.circleMarker([m[3],m[4]],{renderer:canvas,radius:Math.max(2,Math.min(16,Math.sqrt(tot)*1.4)),stroke:false,fillColor:col,fillOpacity:.55})
+     .bindTooltip('<b>'+esc(m[1])+'</b> · '+m[2]+'<br>'+fmt(tot)+' estabelecimentos'+(exe?'':'<br><span style="color:#ffb35c">nenhum laboratório executor</span>'),{direction:'top',offset:[0,-4]})
+     .on('click',()=>openMun(m[0])).addTo(dots);});
+  $('legend').innerHTML='<span><i style="background:#b48ae6"></i>Cidade com laboratório que executa</span><span><i style="background:#ffcc3d"></i>Cidade só com coleta</span><span style="color:var(--dim)">tamanho = nº de estabelecimentos</span>';}
+function drawUF(){dots.clearLayers();const rows=DATA[S.uf]||[];
+  rows.forEach(r=>{if(!passR(r))return;const sel=S.mun&&r.mun===S.mun;
+    L.circleMarker([r.lat,r.lng],{renderer:canvas,radius:S.mun?(sel?6:3):4.5,weight:sel?1.5:0,color:'#e6edf5',fillColor:CATS[r.c].c,fillOpacity:S.mun&&!sel?.25:.9})
+     .bindTooltip('<b>'+esc(r.nome)+'</b><br>'+esc(munN(r.mun)),{direction:'top',offset:[0,-4]}).on('click',()=>openFicha(r)).addTo(dots);});
+  $('legend').innerHTML=CATS.map((c,i)=>S.cats[i]?'<span><i style="background:'+c.c+'"></i>'+c.n+'</span>':'').join('');}
+function fitView(){if(S.mun&&DATA[S.uf]){const p=DATA[S.uf].filter(r=>r.mun===S.mun).map(r=>[r.lat,r.lng]);if(p.length){map.flyToBounds(L.latLngBounds(p).pad(.25),{maxZoom:14,duration:.7});return;}}
+  if(S.uf){const b=UFG[S.uf].b;map.flyToBounds([[b[1],b[0]],[b[3],b[2]]],{duration:.7,padding:[20,20]});}else map.flyToBounds(BRB,{duration:.7});}
+function drawMap(){styleUF();S.uf?drawUF():drawBrasil();}
+$('zIn').onclick=()=>map.zoomIn();$('zOut').onclick=()=>map.zoomOut();$('zFit').onclick=fitView;
+
+// ---------- celular: lista x mapa ----------
+function showMap(on){document.body.classList.toggle('show-map',on);$('mtog').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',(b.dataset.v==='map')===on));if(on)setTimeout(()=>{map.invalidateSize();fitView();},30);}
+$('mtog').addEventListener('click',e=>{const b=e.target.closest('button');if(b)showMap(b.dataset.v==='map');});
+
+// ---------- painel ----------
+const side=$('side');
+const bar=n=>'<span class="tr">'+n.map((v,i)=>v&&S.cats[i]?'<i style="flex:'+v+';background:'+CATS[i].c+'"></i>':'').join('')+'</span>';
+function kpis(n){return '<div class="kpis">'+CATS.map((c,i)=>'<button type="button" class="kpi" data-cat="'+i+'" aria-pressed="'+!!S.cats[i]+'" style="--cc:'+c.c+'"><b>'+fmt(n[i])+'</b><span><i></i>'+c.n+'</span></button>').join('')+'</div><p class="hint">Toque num tipo para mostrar ou esconder.</p>';}
+function crumbs(){let h='<button type="button" data-go="br">Brasil</button>';if(S.uf)h+=' › '+(S.mun?'<button type="button" data-go="uf">'+esc(ufNome(S.uf))+'</button>':'<b>'+esc(ufNome(S.uf))+'</b>');if(S.mun)h+=' › <b>'+esc(munN(S.mun))+'</b>';return '<nav class="crumbs">'+h+'</nav>';}
+
+function viewBrasil(){const tot=[0,0,0,0];UFS.forEach(u=>RES.ufs[u].n.forEach((v,i)=>tot[i]+=v));
+  const L=UFS.map(u=>[u,RES.ufs[u].n,sumCats(RES.ufs[u].n)]).sort((a,b)=>b[2]-a[2]);
+  const ws=RES.mun.filter(m=>!m[5]&&!m[6]&&(m[7]+m[8])>0).sort((a,b)=>(b[7]+b[8])-(a[7]+a[8])).slice(0,8);
+  side.innerHTML=crumbs()+'<h1>'+fmt(sumCats(tot))+' estabelecimentos</h1><p class="sub">Laboratórios clínicos e pontos de coleta ativos no Brasil.</p>'+kpis(tot)+
+   '<div class="lbl"><span>Estados</span><span>toque para abrir</span></div><div class="rows">'+L.map(([u,n,t])=>'<button type="button" class="row" data-uf="'+u+'"><span style="min-width:0"><span class="nm">'+u+' · '+esc(ufNome(u))+'</span>'+bar(n)+'</span><b>'+fmt(t)+'</b><span class="go">›</span></button>').join('')+'</div>'+
+   '<div class="lbl"><span>Espaço comercial</span><span>sem lab executor</span></div><div class="warn"><p>Cidades com pontos de coleta e nenhum laboratório que execute exames.</p><div class="rows">'+ws.map(m=>'<button type="button" class="row" data-mun="'+m[0]+'"><span class="nm">'+esc(m[1])+' · '+m[2]+'</span><b>'+(m[7]+m[8])+' coletas</b><span class="go">›</span></button>').join('')+'</div></div>'+
+   '<p class="note">'+esc(RES.nota)+'</p>';}
+
+function filtersHTML(){return '<div class="filters"><div class="seg" id="fSus"><button type="button" data-v="" aria-pressed="'+(S.sus==='')+'">Todos</button><button type="button" data-v="1" aria-pressed="'+(S.sus==='1')+'">Atende SUS</button><button type="button" data-v="0" aria-pressed="'+(S.sus==='0')+'">Sem SUS</button></div>'+
+  '<select id="fEx" aria-label="Área de exame"><option value="0">Qualquer área de exame</option>'+Object.entries(EX).map(([k,v])=>'<option value="'+k+'"'+(+k===S.ex?' selected':'')+'>'+v+'</option>').join('')+'</select></div>';}
+
+function viewUF(){const rows=DATA[S.uf];if(!rows){side.innerHTML=crumbs()+'<h1>'+esc(ufNome(S.uf))+'</h1><div class="loading"><span class="spin"></span>Carregando os estabelecimentos do estado…</div>';return;}
+  const base=rows.filter(r=>(S.sus===''||String(r.sus)===S.sus)&&(!S.ex||(r.bm>>S.ex&1)));const n=[0,0,0,0];base.forEach(r=>n[r.c]++);
+  const g={};base.forEach(r=>{if(!S.cats[r.c])return;const o=g[r.mun]=g[r.mun]||[0,0,0,0];o[r.c]++;});
+  const L=Object.entries(g).map(([m,v])=>[m,v,v.reduce((a,b)=>a+b,0)]).sort((a,b)=>b[2]-a[2]);
+  side.innerHTML=crumbs()+'<h1>'+esc(ufNome(S.uf))+'</h1><p class="sub">'+fmt(sumCats(n))+' estabelecimentos em '+L.length+' cidades</p>'+kpis(n)+
+   '<div class="lbl"><span>Filtros</span></div>'+filtersHTML()+
+   '<div class="lbl"><span>Cidades</span><span>toque para abrir</span></div><button type="button" class="act" id="cpUF">Copiar estado para Excel</button>'+
+   (L.length?'<div class="rows">'+L.map(([m,v,t])=>'<button type="button" class="row" data-mun="'+m+'"><span style="min-width:0"><span class="nm">'+esc(munN(m))+(!(v[0]+v[1])&&(S.cats[0]||S.cats[1])?'<em>sem lab</em>':'')+'</span>'+bar(v)+'</span><b>'+fmt(t)+'</b><span class="go">›</span></button>').join('')+'</div>':'<p class="empty">Nenhum estabelecimento com esses filtros.</p>');
+  bindFilters();$('cpUF').onclick=()=>copyList(rows.filter(passR),$('cpUF'));}
+
+function viewMun(){const rows=DATA[S.uf];if(!rows){viewUF();return;}
+  const L=rows.filter(r=>r.mun===S.mun&&passR(r));const n=[0,0,0,0];rows.filter(r=>r.mun===S.mun&&(S.sus===''||String(r.sus)===S.sus)&&(!S.ex||(r.bm>>S.ex&1))).forEach(r=>n[r.c]++);
+  side.innerHTML=crumbs()+'<h1>'+esc(munN(S.mun))+'</h1><p class="sub">'+fmt(L.length)+' estabelecimentos · '+S.uf+'</p>'+kpis(n)+
+   '<div class="lbl"><span>Filtros</span></div>'+filtersHTML()+
+   '<div class="lbl"><span>Estabelecimentos</span><span>toque para ver a ficha</span></div><button type="button" class="act" id="cpMun">Copiar lista para Excel</button>'+
+   (L.length?'<div class="cards">'+L.slice(0,S.lim).map(r=>'<button type="button" class="card" data-k="'+r.k+'" style="--cc:'+CATS[r.c].c+'"><span class="cap"></span><span style="min-width:0"><strong>'+esc(r.nome)+'</strong><small>'+CATS[r.c].n+(r.sus?' · SUS':'')+'</small></span><span class="go">›</span></button>').join('')+'</div>'+(L.length>S.lim?'<button type="button" class="more" id="more">Mostrar mais</button>':''):'<p class="empty">Nenhum estabelecimento com esses filtros.</p>');
+  bindFilters();$('cpMun').onclick=()=>copyList(L,$('cpMun'));if($('more'))$('more').onclick=()=>{S.lim+=60;viewMun();};}
+
+function bindFilters(){$('fSus').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.sus=b.dataset.v;render(false);};$('fEx').onchange=e=>{S.ex=+e.target.value;render(false);};}
+function render(fit=true){if(!S.uf)viewBrasil();else if(!S.mun)viewUF();else viewMun();drawMap();if(fit)fitView();}
+
+side.addEventListener('click',e=>{const t=e.target.closest('[data-cat],[data-uf],[data-mun],[data-k],[data-go]');if(!t)return;
+  if(t.dataset.cat!==undefined){const i=+t.dataset.cat;S.cats[i]=S.cats[i]?0:1;if(!S.cats.some(Boolean))S.cats=[1,1,1,1];render(false);}
+  else if(t.dataset.uf)openUF(t.dataset.uf);
+  else if(t.dataset.mun)openMun(t.dataset.mun);
+  else if(t.dataset.k)openFicha(DATA[S.uf][+t.dataset.k]);
+  else if(t.dataset.go==='br'){S.uf=null;S.mun=null;S.lim=60;render();side.scrollTop=0;}
+  else if(t.dataset.go==='uf'){S.mun=null;render();side.scrollTop=0;}});
+
+async function openUF(u,mun){S.uf=u;S.mun=mun||null;S.lim=60;render();side.scrollTop=0;
+  if(!DATA[u]){$('mbusy').hidden=false;try{await loadUF(u);}catch(e){side.innerHTML=crumbs()+'<p class="empty">Não foi possível carregar '+esc(ufNome(u))+'. Verifique a conexão e toque de novo.</p>';$('mbusy').hidden=true;return;}$('mbusy').hidden=true;if(S.uf===u)render();}}
+function openMun(m){const u=MUN[m]?MUN[m].uf:null;if(!u)return;openUF(u,m);}
+
+// ---------- ficha ----------
+const ico={pin:'<svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>',cp:'<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>',map:'<svg viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/></svg>'};
+const fmtCnpj=s=>{s=String(s||'');return s.length===14?s.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5'):s;};
+const exList=bm=>Object.keys(EX).filter(k=>bm>>k&1).map(k=>EX[k]);
+async function openFicha(r){const sh=$('sheet');const c=CATS[r.c];
+  sh.innerHTML='<div class="grab"></div><div class="shead"><div class="tags"><span class="tag" style="color:'+c.c+'">'+c.n+'</span><span class="tag" style="color:var(--muted)">'+NAT[r.nat]+'</span><span class="tag" style="color:'+(r.sus?'var(--ok)':'var(--muted)')+'">'+(r.sus?'Atende SUS':'Sem SUS')+'</span></div><button type="button" class="x" aria-label="Fechar">✕</button></div><h3>'+esc(r.nome)+'</h3><div class="loading"><span class="spin"></span>Carregando contato…</div>';
+  sh.classList.add('on');$('scrim').classList.add('on');sh.scrollTop=0;sh.querySelector('.x').onclick=closeFicha;
+  let d;try{d=(await loadDet(r.uf))[r.k];}catch(e){sh.querySelector('.loading').textContent='Não foi possível carregar o contato. Verifique a conexão.';return;}
+  const [cnes,rz,end,tel,email,cnpj,tipo,geo]=d;const q=encodeURIComponent(r.nome+' '+munN(r.mun)+' '+r.uf);const ex=exList(r.bm);
+  sh.innerHTML='<div class="grab"></div><div class="shead"><div class="tags"><span class="tag" style="color:'+c.c+'">'+c.n+'</span><span class="tag" style="color:var(--muted)">'+NAT[r.nat]+'</span><span class="tag" style="color:'+(r.sus?'var(--ok)':'var(--muted)')+'">'+(r.sus?'Atende SUS':'Sem SUS')+'</span></div><button type="button" class="x" aria-label="Fechar">✕</button></div>'+
+   '<h3>'+esc(r.nome)+'</h3><p class="rz">'+esc(rz)+'</p>'+
+   '<div class="bacts"><a class="pri" href="https://www.google.com/maps/search/?api=1&query='+r.lat+','+r.lng+'" target="_blank" rel="noopener">'+ico.pin+'Rota</a><button type="button" id="cpC">'+ico.cp+'Copiar contato</button><button type="button" id="onMap">'+ico.map+'Ver no mapa</button></div>'+
+   '<dl>'+(tel?'<div><dt>Telefone</dt><dd>'+esc(tel)+'</dd></div>':'')+(email?'<div><dt>E-mail</dt><dd>'+esc(email)+'</dd></div>':'')+'<div><dt>Endereço</dt><dd>'+esc(end)+'</dd></div><div><dt>Cidade</dt><dd>'+esc(munN(r.mun))+' / '+r.uf+'</dd></div>'+
+   (cnpj?'<div><dt>CNPJ</dt><dd>'+fmtCnpj(cnpj)+'</dd></div>':'')+'<div><dt>CNES</dt><dd>'+cnes+'</dd></div><div><dt>Tipo</dt><dd>'+esc(RES.tipos[tipo]||'')+'</dd></div>'+(geo?'':'<div><dt>Local</dt><dd>Posição aproximada (centro da cidade)</dd></div>')+'</dl>'+
+   (ex.length?'<div class="exs">'+ex.map(x=>'<span>'+x+'</span>').join('')+'</div>':'')+
+   '<div class="links"><a href="https://cnes.datasus.gov.br/pages/estabelecimentos/consulta.jsp?search='+cnes+'" target="_blank" rel="noopener">Ficha CNES ↗</a><a href="https://www.google.com/search?q='+q+'" target="_blank" rel="noopener">Google ↗</a><a href="https://www.google.com/search?q='+encodeURIComponent('site:instagram.com '+r.nome+' '+munN(r.mun))+'" target="_blank" rel="noopener">Instagram ↗</a></div>';
+  sh.querySelector('.x').onclick=closeFicha;
+  $('cpC').onclick=()=>copy([r.nome,fmtCnpj(cnpj),tel,email,end,munN(r.mun)+'/'+r.uf].filter(Boolean).join('\n'),'Contato copiado');
+  $('onMap').onclick=()=>{closeFicha();if(S.uf!==r.uf||S.mun!==r.mun){S.uf=r.uf;S.mun=r.mun;render(false);}showMap(true);setTimeout(()=>map.flyTo([r.lat,r.lng],15,{duration:.8}),80);};}
+function closeFicha(){$('sheet').classList.remove('on');$('scrim').classList.remove('on');}
+$('scrim').onclick=closeFicha;document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeFicha();$('res').hidden=true;}});
+let y0=null;$('sheet').addEventListener('touchstart',e=>{y0=$('sheet').scrollTop<=0?e.touches[0].clientY:null;},{passive:true});
+$('sheet').addEventListener('touchend',e=>{if(y0!==null&&e.changedTouches[0].clientY-y0>80)closeFicha();y0=null;});
+
+// ---------- copiar ----------
+let tt;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),1800);}
+async function copy(txt,ok){try{await navigator.clipboard.writeText(txt);}catch(e){const t=$('cb');t.value=txt;t.select();try{document.execCommand('copy');}catch(_){}}toast(ok);}
+async function copyList(L,btn){if(!L.length)return toast('Nada para copiar');const old=btn.textContent;btn.textContent='Preparando…';
+  let d;try{d=await loadDet(S.uf);}catch(e){btn.textContent=old;return toast('Sem conexão para buscar os contatos');}
+  const h=['Tipo','Nome','Razão social','CNPJ','CNES','UF','Município','Endereço','Telefone','E-mail','SUS','Natureza','Áreas de exame'];
+  const lines=L.map(r=>{const x=d[r.k];return [CATS[r.c].n,r.nome,x[1]||r.nome,fmtCnpj(x[5]),x[0],r.uf,munN(r.mun),x[2],x[3],x[4],r.sus?'Sim':'Não',NAT[r.nat],exList(r.bm).join('; ')].map(v=>String(v??'').replace(/[\t\n]/g,' ')).join('\t');});
+  btn.textContent=old;copy([h.join('\t'),...lines].join('\n'),fmt(L.length)+' linhas copiadas');}
+
+// ---------- busca ----------
+let BUSCA=null,buscaP=null;
+function loadBusca(){return buscaP=buscaP||getJ('busca.json').then(b=>{BUSCA=b.r.map(x=>[norm(x[0]),x[0],b.uf[x[1]],x[2],x[3]]);return BUSCA;}).catch(e=>{buscaP=null;throw e;});}
+let tq;$('q').addEventListener('input',e=>{$('clr').hidden=!e.target.value;clearTimeout(tq);tq=setTimeout(search,160);});
+$('q').addEventListener('focus',()=>{if($('q').value.trim().length>=2)search();});
+$('clr').onclick=()=>{$('q').value='';$('clr').hidden=true;$('res').hidden=true;$('q').focus();};
+document.addEventListener('click',e=>{if(!e.target.closest('.sbox'))$('res').hidden=true;});
+async function search(){const q=norm($('q').value).trim();const out=$('res');if(q.length<2){out.hidden=true;return;}
+  const t=q.split(/\s+/);const has=s=>t.every(x=>s.includes(x));
+  const ufs=UFS.filter(u=>has(norm(u+' '+ufNome(u)))).slice(0,4);
+  const muns=MIDX.filter(m=>has(m[0])).slice(0,6).map(m=>MUN[m[1]]);
+  let h='';
+  if(ufs.length)h+='<h4>Estados</h4>'+ufs.map(u=>'<button type="button" data-uf="'+u+'"><b>'+esc(ufNome(u))+'</b><small>'+fmt(sumCats(RES.ufs[u].n))+' estabelecimentos</small></button>').join('');
+  if(muns.length)h+='<h4>Cidades</h4>'+muns.map(m=>'<button type="button" data-mun="'+m.id+'"><b>'+esc(m.nome)+' · '+m.uf+'</b><small>'+fmt(sumCats(m.n))+' estabelecimentos</small></button>').join('');
+  const estH=hits=>hits.length?'<h4>Laboratórios e postos</h4>'+hits.map(x=>'<button type="button" data-hit="'+x[2]+'|'+x[3]+'"><b>'+esc(x[1])+'</b><small>'+esc(x[4])+'</small></button>').join(''):'';
+  if(q.length<3){out.innerHTML=h||'<p>Digite mais uma letra…</p>';out.hidden=false;return;}
+  out.innerHTML=h+'<h4>Laboratórios e postos</h4><p><span class="spin" style="display:inline-block;vertical-align:middle;margin-right:8px"></span>Buscando no Brasil…</p>';out.hidden=false;
+  try{await loadBusca();}catch(e){out.innerHTML=h+'<p>Busca por nome indisponível sem conexão.</p>';return;}
+  if(norm($('q').value).trim()!==q)return;
+  const hits=[];for(let i=0;i<BUSCA.length&&hits.length<25;i++){const b=BUSCA[i];if(has(b[0]))hits.push([b[0],b[1],b[2],b[3],munN(b[4])+' · '+b[2]]);}
+  out.innerHTML=(h+estH(hits))||'<p>Nada encontrado.</p>';}
+$('res').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;$('res').hidden=true;
+  if(b.dataset.uf)return openUF(b.dataset.uf);if(b.dataset.mun)return openMun(b.dataset.mun);
+  if(b.dataset.hit){const [u,k]=b.dataset.hit.split('|');S.uf=u;S.mun=null;render(false);$('mbusy').hidden=false;try{await loadUF(u);}catch(err){$('mbusy').hidden=true;return toast('Sem conexão');}$('mbusy').hidden=true;
+    const r=DATA[u][+k];S.mun=r.mun;render(false);fitView();openFicha(r);}});
+
+render();
+if(matchMedia('(max-width:899px)').matches)showMap(true);
+})().catch(e=>{document.getElementById('side').innerHTML='<p style="color:#ffb35c;padding:20px">Não foi possível abrir o atlas: '+String(e.message||e)+'</p>';});
+</script>
+
+</body>
+</html>
