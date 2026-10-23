@@ -133,7 +133,15 @@ select{background:var(--bg2);border:1px solid var(--line2);border-radius:8px;pad
 .uflbl{font-family:var(--f-mono);font-size:10.5px;color:rgba(138,153,173,.75);letter-spacing:.06em;text-align:center;pointer-events:none;white-space:nowrap}
 .mtools{position:absolute;z-index:1100;right:max(10px,env(safe-area-inset-right,0px));top:10px;display:flex;flex-direction:column;gap:6px}
 .mtools button{width:40px;height:40px;border-radius:12px;border:1px solid var(--line2);background:rgba(11,17,28,.94);font-size:17px;cursor:pointer}
-.legend{position:absolute;z-index:1100;left:10px;top:10px;display:flex;flex-direction:column;gap:3px;background:rgba(5,7,12,.8);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-family:var(--f-mono);font-size:10.5px;color:var(--muted);max-width:calc(100% - 80px)}
+.mtl{position:absolute;z-index:1100;left:max(10px,env(safe-area-inset-left,0px));top:10px;right:64px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;pointer-events:none}
+.mtl>*{pointer-events:auto}
+.mnav{display:flex;align-items:center;gap:2px;background:rgba(11,17,28,.96);border:1px solid var(--neuro);border-radius:999px;padding:3px;box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:100%}
+.mnav button{border:0;background:none;cursor:pointer;color:var(--fg);font:600 14px var(--f-body);display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;min-height:40px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.mnav .bk{color:var(--neuro)}
+.mnav .bk small{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase}
+.mnav .cx{width:40px;height:40px;padding:0;justify-content:center;background:var(--bg2);color:var(--muted);font-size:16px;flex:none}
+.mnav .nm{color:var(--fg);padding-left:4px}
+.legend{position:static;display:flex;flex-direction:column;gap:3px;background:rgba(5,7,12,.8);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-family:var(--f-mono);font-size:10.5px;color:var(--muted);max-width:calc(100% - 80px)}
 .legend span{display:flex;align-items:center;gap:6px}
 .legend i{width:9px;height:9px;border-radius:50%;flex:none}
 .mbusy{position:absolute;z-index:1100;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:10px;background:rgba(11,17,28,.95);border:1px solid var(--line2);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--muted)}
@@ -147,7 +155,8 @@ select{background:var(--bg2);border:1px solid var(--line2);border-radius:8px;pad
 @media (min-width:900px){.sheet{left:auto;right:16px;bottom:16px;top:auto;width:440px;border-radius:16px;border:1px solid var(--line2);max-height:calc(100% - 100px)}}
 .grab{width:40px;height:4px;border-radius:2px;background:var(--line2);margin:4px auto 10px}
 .shead{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.x{border:0;background:var(--bg2);border-radius:50%;width:32px;height:32px;color:var(--muted);cursor:pointer;flex:none}
+.x{border:1px solid var(--line2);background:var(--bg2);border-radius:50%;width:44px;height:44px;color:var(--fg);font-size:18px;cursor:pointer;flex:none}
+.sclose{all:unset;cursor:pointer;display:block;width:100%;box-sizing:border-box;text-align:center;margin-top:16px;padding:13px;border-radius:12px;border:1px solid var(--line2);font-family:var(--f-mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .tags{display:flex;gap:6px;flex-wrap:wrap}
 .tag{font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid currentColor}
 .sheet h3{font-weight:800;font-size:19px;line-height:1.25;margin:10px 0 2px}
@@ -186,7 +195,7 @@ textarea.cb{position:fixed;left:-9999px}
     <section class="side" id="side" aria-live="polite"><div class="loading"><span class="spin"></span>Abrindo o atlas…</div></section>
     <section class="mapwrap" aria-label="Mapa">
       <div id="map"></div>
-      <div class="legend" id="legend"></div>
+      <div class="mtl"><div class="mnav" id="mnav" hidden></div><div class="legend" id="legend"></div></div>
       <div class="mtools"><button type="button" id="zIn" aria-label="Aproximar">+</button><button type="button" id="zOut" aria-label="Afastar">−</button><button type="button" id="zFit" aria-label="Enquadrar">⟲</button></div>
       <div class="mbusy" id="mbusy" hidden><span class="spin"></span><span>Carregando estado…</span></div>
     </section>
@@ -233,7 +242,8 @@ async function loadDet(uf){return DET[uf]=DET[uf]||await getJ('uf/'+uf+'_d.json'
 const passR=r=>S.cats[r.c]&&(S.sus===''||String(r.sus)===S.sus)&&(!S.ex||(r.bm>>S.ex&1));
 
 // ---------- mapa ----------
-const map=L.map('map',{zoomControl:false,attributionControl:false,preferCanvas:true,minZoom:3,maxZoom:17,zoomSnap:.25,worldCopyJump:false});
+const TOUCH=matchMedia('(pointer:coarse)').matches;
+const map=L.map('map',{zoomControl:false,attributionControl:false,preferCanvas:true,renderer:L.canvas({tolerance:TOUCH?14:4,padding:.3}),minZoom:3,maxZoom:17,zoomSnap:.25,worldCopyJump:false});
 const canvas=L.canvas({padding:.3});
 const BRB=L.latLngBounds([-33.8,-74],[5.3,-34.7]);
 map.setView([-15,-53],4);if(map.getSize().x)map.fitBounds(BRB);
@@ -257,14 +267,18 @@ function drawBrasil(){dots.clearLayers();
   $('legend').innerHTML='<span><i style="background:#b48ae6"></i>Cidade com laboratório que executa</span><span><i style="background:#ffcc3d"></i>Cidade só com coleta</span><span style="color:var(--dim)">tamanho = nº de estabelecimentos</span>';}
 function drawUF(){dots.clearLayers();const rows=DATA[S.uf]||[];
   rows.forEach(r=>{if(!passR(r))return;const sel=S.mun&&r.mun===S.mun;
-    L.circleMarker([r.lat,r.lng],{radius:S.mun?(sel?6:3):4.5,weight:sel?1.5:0,color:'#e6edf5',fillColor:CATS[r.c].c,fillOpacity:S.mun&&!sel?.25:.9})
+    L.circleMarker([r.lat,r.lng],{radius:S.mun?(sel?(TOUCH?8:6):3):(TOUCH?6:4.5),weight:sel?1.5:0,color:'#e6edf5',fillColor:CATS[r.c].c,fillOpacity:S.mun&&!sel?.25:.9})
      .bindTooltip('<b>'+esc(r.nome)+'</b><br>'+esc(munN(r.mun)),{direction:'top',offset:[0,-4]}).on('click',e=>{L.DomEvent.stopPropagation(e);openFicha(r);}).addTo(dots);});
   $('legend').innerHTML=CATS.map((c,i)=>S.cats[i]?'<span><i style="background:'+c.c+'"></i>'+c.n+'</span>':'').join('');}
 let flyT;const fly=(b,o)=>{b=L.latLngBounds(b);clearTimeout(flyT);if(document.hidden){map.fitBounds(b,{...o,animate:false});return;}map.flyToBounds(b,o);
   flyT=setTimeout(()=>{const c=map.getCenter(),t=b.getCenter();if(Math.abs(c.lat-t.lat)+Math.abs(c.lng-t.lng)>.05)map.fitBounds(b,{...o,animate:false});},((o&&o.duration)||.7)*1000+700);};
 function fitView(){const sz=map.getSize();if(!sz.x||!sz.y)return;if(S.mun&&DATA[S.uf]){const p=DATA[S.uf].filter(r=>r.mun===S.mun);if(p.length){const q=(a,f)=>{a=a.slice().sort((x,y)=>x-y);return a[Math.floor(f*(a.length-1))];};const la=p.map(r=>r.lat),lo=p.map(r=>r.lng);const b=[[q(la,.05),q(lo,.05)],[q(la,.95),q(lo,.95)]];fly(L.latLngBounds(b).pad(.3),{maxZoom:14,duration:.7});return;}}
   if(S.uf){const b=UFG[S.uf].b;fly([[b[1],b[0]],[b[3],b[2]]],{duration:.7,padding:[20,20]});}else fly(BRB,{duration:.7});}
-function drawMap(){styleUF();S.uf?drawUF():drawBrasil();}
+function drawNav(){const n=$('mnav');if(!S.uf){n.hidden=true;return;}
+  n.innerHTML='<button type="button" class="bk" data-nav="up"><span aria-hidden="true">‹</span><small>'+(S.mun?esc(S.uf):'Brasil')+'</small></button><button type="button" class="nm" data-nav="list">'+esc(S.mun?munN(S.mun):ufNome(S.uf))+'</button><button type="button" class="cx" data-nav="br" aria-label="Fechar e voltar ao Brasil">✕</button>';n.hidden=false;}
+$('mnav').addEventListener('click',e=>{const b=e.target.closest('[data-nav]');if(!b)return;const v=b.dataset.nav;closeFicha();
+  if(v==='br'||(v==='up'&&!S.mun)){S.uf=null;S.mun=null;S.lim=60;render();}else if(v==='up'){S.mun=null;render();}else showMap(false);});
+function drawMap(){styleUF();S.uf?drawUF():drawBrasil();drawNav();}
 $('zIn').onclick=()=>map.zoomIn();$('zOut').onclick=()=>map.zoomOut();$('zFit').onclick=fitView;
 
 // ---------- celular: lista x mapa ----------
@@ -336,8 +350,8 @@ async function openFicha(r){const sh=$('sheet');const c=CATS[r.c];
    '<dl>'+(tel?'<div><dt>Telefone</dt><dd>'+esc(tel)+'</dd></div>':'')+(email?'<div><dt>E-mail</dt><dd>'+esc(email)+'</dd></div>':'')+'<div><dt>Endereço</dt><dd>'+esc(end)+'</dd></div><div><dt>Cidade</dt><dd>'+esc(munN(r.mun))+' / '+r.uf+'</dd></div>'+
    (cnpj?'<div><dt>CNPJ</dt><dd>'+fmtCnpj(cnpj)+'</dd></div>':'')+'<div><dt>CNES</dt><dd>'+cnes+'</dd></div><div><dt>Tipo</dt><dd>'+esc(RES.tipos[tipo]||'')+'</dd></div>'+(geo?'':'<div><dt>Local</dt><dd>Posição aproximada (centro da cidade)</dd></div>')+'</dl>'+
    (ex.length?'<div class="exs">'+ex.map(x=>'<span>'+x+'</span>').join('')+'</div>':'')+
-   '<div class="links"><a href="https://cnes.datasus.gov.br/pages/estabelecimentos/consulta.jsp?search='+cnes+'" target="_blank" rel="noopener">Ficha CNES ↗</a><a href="https://www.google.com/search?q='+q+'" target="_blank" rel="noopener">Google ↗</a><a href="https://www.google.com/search?q='+encodeURIComponent('site:instagram.com '+r.nome+' '+munN(r.mun))+'" target="_blank" rel="noopener">Instagram ↗</a></div>';
-  sh.querySelector('.x').onclick=closeFicha;
+   '<div class="links"><a href="https://cnes.datasus.gov.br/pages/estabelecimentos/consulta.jsp?search='+cnes+'" target="_blank" rel="noopener">Ficha CNES ↗</a><a href="https://www.google.com/search?q='+q+'" target="_blank" rel="noopener">Google ↗</a><a href="https://www.google.com/search?q='+encodeURIComponent('site:instagram.com '+r.nome+' '+munN(r.mun))+'" target="_blank" rel="noopener">Instagram ↗</a></div>'+'<button type="button" class="sclose" id="sClose">Fechar</button>';
+  sh.querySelector('.x').onclick=closeFicha;$('sClose').onclick=closeFicha;
   $('cpC').onclick=()=>copy([r.nome,fmtCnpj(cnpj),tel,email,end,munN(r.mun)+'/'+r.uf].filter(Boolean).join('\n'),'Contato copiado');
   $('onMap').onclick=()=>{closeFicha();if(S.uf!==r.uf||S.mun!==r.mun){S.uf=r.uf;S.mun=r.mun;render(false);}showMap(true);setTimeout(()=>map.flyTo([r.lat,r.lng],15,{duration:.8}),80);};}
 function closeFicha(){$('sheet').classList.remove('on');$('scrim').classList.remove('on');}
